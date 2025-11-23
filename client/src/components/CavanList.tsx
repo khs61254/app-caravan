@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CavanCard from './CavanCard';
 import './CavanList.css';
+import { CavanDetailModal } from './CavanDetailModal';
 
 // Define the Cavan type based on backend API response
 interface Cavan {
@@ -33,6 +34,23 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded }) => {
   const [page, setPage] = useState<number>(0); // For pagination if implemented
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [selectedCavanId, setSelectedCavanId] = useState<string | null>(null);
+
+  const handleCardClick = (cavanId: string) => {
+    setSelectedCavanId(cavanId);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedCavanId(null);
+  };
+
+  const handleLike = (cavanId: string) => {
+    setCavans((prevCavans) =>
+      prevCavans.map((cavan) =>
+        cavan.id === cavanId ? { ...cavan, likes: cavan.likes + 1 } : cavan,
+      ),
+    );
+  };
 
   const observer = useRef<IntersectionObserver>();
   const lastCavanElementRef = useCallback(
@@ -125,7 +143,7 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded }) => {
           // Use the ref for the last element to trigger infinite scroll
           if (cavans.length === index + 1) {
             return (
-              <div ref={lastCavanElementRef} key={cavan.id}>
+              <div ref={lastCavanElementRef} key={cavan.id} onClick={() => handleCardClick(cavan.id)}>
                 <CavanCard
                   id={cavan.id}
                   name={cavan.name}
@@ -134,6 +152,7 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded }) => {
                   likes={cavan.likes}
                   location={cavan.location} // Pass location
                   isGoogleMapsLoaded={isGoogleMapsLoaded} // Pass Google Maps loaded status
+                  onLike={handleLike}
                 />
               </div>
             );
@@ -148,12 +167,17 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded }) => {
                 likes={cavan.likes}
                 location={cavan.location} // Pass location
                 isGoogleMapsLoaded={isGoogleMapsLoaded} // Pass Google Maps loaded status
+                onClick={() => handleCardClick(cavan.id)}
+                onLike={handleLike}
               />
             );
           }
         })}
       </div>
       {loading && <p className="loading-message">Loading more cavans...</p>}
+      {selectedCavanId && (
+        <CavanDetailModal cavanId={selectedCavanId} onClose={handleCloseModal} />
+      )}
     </div>
   );
 };

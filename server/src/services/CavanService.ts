@@ -1,5 +1,9 @@
 import { Cavan } from '@models/Cavan';
+import { User } from '@models/User';
+import { NotFoundException } from '@exceptions/NotFoundException';
 import { CavanRepository } from '@repositories/CavanRepository';
+import { ReservationRepository } from '@repositories/ReservationRepository';
+import { UserRepository } from '@repositories/UserRepository';
 import { GoogleMapsService, Location } from './GoogleMapsService';
 
 export type CavanSortBy = 'distance' | 'likes' | 'price';
@@ -10,7 +14,9 @@ export type CavanWithDistance = Cavan & { distance: number | null };
 export class CavanService {
   constructor(
     private readonly cavanRepo: CavanRepository,
-    private readonly googleMapsService: GoogleMapsService,
+    private readonly userRepo: UserRepository,
+    private readonly reservationRepo: ReservationRepository,
+    private readonly googleMapsService: GoogleMapsService
   ) {}
 
   /**
@@ -59,5 +65,27 @@ export class CavanService {
       default:
         return cavans;
     }
+  }
+
+  async getCavanDetails(cavanId: string): Promise<{
+    cavan: Cavan;
+    host: User;
+    transactions: number;
+  }> {
+    const cavan = await this.cavanRepo.findById(cavanId, 'Cavan');
+    const host = await this.userRepo.findById(cavan.hostId, 'Host');
+
+    const hostCavans = await this.cavanRepo.findByHostId(host.id);
+    const hostCavanIds = hostCavans.map((c) => c.id);
+
+    const transactions = await this.reservationRepo.countCompletedByCavanIds(
+      hostCavanIds
+    );
+
+    return {
+      cavan,
+      host,
+      transactions,
+    };
   }
 }

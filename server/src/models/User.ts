@@ -3,6 +3,7 @@ export type UserRole = 'host' | 'guest';
 export interface User {
   id: string;
   name: string;
+  photoUrl: string;
   contact: string;
   role: UserRole;
   // In a real system, this would be more complex

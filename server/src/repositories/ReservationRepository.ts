@@ -1,4 +1,4 @@
-import { Reservation } from '../models/Reservation';
+import { Reservation, ReservationStatus } from '../models/Reservation';
 import { InMemoryRepository } from './InMemoryRepository';
 
 export class ReservationRepository extends InMemoryRepository<Reservation> {
@@ -32,5 +32,18 @@ export class ReservationRepository extends InMemoryRepository<Reservation> {
       }
     }
     return conflicts;
+  }
+
+  async countCompletedByCavanIds(cavanIds: string[]): Promise<number> {
+    let count = 0;
+    for (const reservation of this.entities.values()) {
+      if (
+        cavanIds.includes(reservation.cavanId) &&
+        reservation.status === 'completed'
+      ) {
+        count++;
+      }
+    }
+    return count;
   }
 }

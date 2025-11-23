@@ -39,6 +39,13 @@
   color: #7f8c8d;
 }
 
+.cavan-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
 .cavan-likes {
   display: flex;
   align-items: center;
@@ -46,12 +53,27 @@
   font-size: 1em;
   color: #e74c3c;
   font-weight: 500;
+  cursor: pointer;
 }
 
 .heart-icon {
   fill: #e74c3c;
   width: 18px;
   height: 18px;
+}
+
+.map-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.map-button:hover {
+  background-color: #2980b9;
 }
 
 .cavan-map {

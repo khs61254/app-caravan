@@ -66,7 +66,7 @@ describe('ReservationService', () => {
 
     // Assert
     expect(mockValidator.validate).toHaveBeenCalledWith(request);
-    expect(mockCavanRepo.findById).toHaveBeenCalledWith(request.cavanId);
+    expect(mockCavanRepo.findById).toHaveBeenCalledWith(request.cavanId, 'Cavan');
     expect(mockReservationRepo.save).toHaveBeenCalled();
     expect(result.totalPrice).toBe(500);
     expect(result.id).toBe('new-res-id');

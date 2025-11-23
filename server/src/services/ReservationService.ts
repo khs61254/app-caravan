@@ -22,12 +22,7 @@ export class ReservationService {
     await this.reservationValidator.validate(request);
 
     // 2. Calculate the price
-    const cavan = await this.cavanRepo.findById(request.cavanId);
-    if (!cavan) {
-      // This check is redundant due to the validator, but it satisfies the compiler
-      // and adds a layer of defense.
-      throw new NotFoundException('Cavan', request.cavanId);
-    }
+    const cavan = await this.cavanRepo.findById(request.cavanId, 'Cavan');
     const totalPrice = this.calculatePrice(request.startDate, request.endDate, cavan.dailyRate);
 
     // 3. Create the Reservation object (acting as a factory)

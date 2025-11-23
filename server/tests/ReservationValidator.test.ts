@@ -67,7 +67,7 @@ describe('ReservationValidator', () => {
   });
 
   it('should throw NotFoundException if user does not exist', async () => {
-    mockUserRepo.findById.mockResolvedValue(null);
+    mockUserRepo.findById.mockRejectedValue(new NotFoundException('User', 'user-1'));
     mockCavanRepo.findById.mockResolvedValue({ id: 'cavan-1' } as Cavan);
     
     await expect(validator.validate(validRequest)).rejects.toThrow(new NotFoundException('User', 'user-1'));
@@ -75,7 +75,7 @@ describe('ReservationValidator', () => {
 
   it('should throw NotFoundException if cavan does not exist', async () => {
     mockUserRepo.findById.mockResolvedValue({ id: 'user-1' } as User);
-    mockCavanRepo.findById.mockResolvedValue(null);
+    mockCavanRepo.findById.mockRejectedValue(new NotFoundException('Cavan', 'cavan-1'));
 
     await expect(validator.validate(validRequest)).rejects.toThrow(new NotFoundException('Cavan', 'cavan-1'));
   });

@@ -1,12 +1,16 @@
 import { IRepository } from './IRepository';
 import { randomUUID } from 'crypto';
+import { NotFoundException } from '../exceptions/NotFoundException';
 
 export class InMemoryRepository<T extends { id: string }> implements IRepository<T> {
   protected readonly entities: Map<string, T> = new Map();
 
-  async findById(id: string): Promise<T | null> {
+  async findById(id: string, resourceName: string): Promise<T> {
     const entity = this.entities.get(id);
-    return entity ? { ...entity } : null;
+    if (!entity) {
+      throw new NotFoundException(resourceName, id);
+    }
+    return { ...entity };
   }
 
   async findAll(): Promise<T[]> {

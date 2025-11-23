@@ -33,15 +33,8 @@ export class ReservationValidator {
   }
 
   private async validateEntities(guestId: string, cavanId: string): Promise<void> {
-    const guest = await this.userRepo.findById(guestId);
-    if (!guest) {
-      throw new NotFoundException('User', guestId);
-    }
-
-    const cavan = await this.cavanRepo.findById(cavanId);
-    if (!cavan) {
-      throw new NotFoundException('Cavan', cavanId);
-    }
+    await this.userRepo.findById(guestId, 'User');
+    await this.cavanRepo.findById(cavanId, 'Cavan');
   }
 
   private async validateNoConflicts(cavanId: string, startDate: Date, endDate: Date): Promise<void> {

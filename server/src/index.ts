@@ -22,16 +22,16 @@ const googleMapsService = new GoogleMapsService(); // Instantiate the new servic
 const reservationValidator = new ReservationValidator(reservationRepo, userRepo, cavanRepo);
 const reservationService = new ReservationService(reservationRepo, cavanRepo, reservationValidator);
 // Inject GoogleMapsService into CavanService
-const cavanService = new CavanService(cavanRepo, googleMapsService);
+const cavanService = new CavanService(cavanRepo, userRepo, reservationRepo, googleMapsService);
 // --- End of Composition Root ---
 
 // --- Pre-populate with some data for demonstration ---
 const setupDemoData = async () => {
   console.log('Seeding database with demo data...');
   try {
-    await userRepo.save({ id: 'guest-1', name: 'Test Guest', role: 'guest', contact: 'guest@test.com', isVerified: true });
-    await userRepo.save({ id: 'host-1', name: 'Host One', role: 'host', contact: 'host1@test.com', isVerified: true });
-    await userRepo.save({ id: 'host-2', name: 'Host Two', role: 'host', contact: 'host2@test.com', isVerified: true });
+    await userRepo.save({ id: 'guest-1', name: 'Test Guest', role: 'guest', contact: 'guest@test.com', isVerified: true, photoUrl: 'https://i.pravatar.cc/150?u=guest-1' });
+    await userRepo.save({ id: 'host-1', name: 'Host One', role: 'host', contact: 'host1@test.com', isVerified: true, photoUrl: 'https://i.pravatar.cc/150?u=host-1' });
+    await userRepo.save({ id: 'host-2', name: 'Host Two', role: 'host', contact: 'host2@test.com', isVerified: true, photoUrl: 'https://i.pravatar.cc/150?u=host-2' });
     
     await cavanRepo.save({ 
       id: 'cavan-1',
@@ -39,7 +39,11 @@ const setupDemoData = async () => {
       hostId: 'host-1',
       capacity: 4,
       amenities: ['Kitchen', 'Wi-Fi', 'Air Conditioner'],
-      photos: [],
+      photos: [
+        'https://picsum.photos/seed/cavan-1-A/800/600',
+        'https://picsum.photos/seed/cavan-1-B/800/600',
+        'https://picsum.photos/seed/cavan-1-C/800/600',
+      ],
       location: { lat: 37.5665, lng: 126.9780 }, // Seoul
       status: 'available',
       dailyRate: 150,
@@ -51,7 +55,11 @@ const setupDemoData = async () => {
       hostId: 'host-2',
       capacity: 2,
       amenities: ['Kitchen'],
-      photos: [],
+      photos: [
+        'https://picsum.photos/seed/cavan-2-A/800/600',
+        'https://picsum.photos/seed/cavan-2-B/800/600',
+        'https://picsum.photos/seed/cavan-2-C/800/600',
+      ],
       location: { lat: 35.1796, lng: 129.0756 }, // Busan
       status: 'available',
       dailyRate: 120,
@@ -63,7 +71,11 @@ const setupDemoData = async () => {
       hostId: 'host-1',
       capacity: 6,
       amenities: ['Kitchen', 'Wi-Fi', 'TV'],
-      photos: [],
+      photos: [
+        'https://picsum.photos/seed/cavan-3-A/800/600',
+        'https://picsum.photos/seed/cavan-3-B/800/600',
+        'https://picsum.photos/seed/cavan-3-C/800/600',
+      ],
       location: { lat: 33.4996, lng: 126.5312 }, // Jeju
       status: 'available',
       dailyRate: 200,
@@ -106,6 +118,16 @@ app.get('/api/cavans', async (req: Request, res: Response, next: NextFunction) =
     
     const cavans = await cavanService.getCavans(sortBy, origin);
     res.status(200).json(cavans);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/cavans/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const details = await cavanService.getCavanDetails(id);
+    res.status(200).json(details);
   } catch (error) {
     next(error);
   }
