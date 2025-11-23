@@ -1,20 +1,28 @@
+import 'dotenv/config';
+import 'module-alias/register';
 import express, { Request, Response, NextFunction } from 'express';
 import { ApplicationException } from './exceptions/ApplicationException';
 import { ReservationService } from './services/ReservationService';
 import { ReservationValidator } from './validators/ReservationValidator';
 import { ReservationRepository } from './repositories/ReservationRepository';
-import { InMemoryRepository } from './repositories/InMemoryRepository';
 import { User } from './models/User';
-import { Caravan } from './models/Caravan';
+import { Cavan } from './models/Cavan';
+import { CavanRepository } from './repositories/CavanRepository';
+import { CavanService, CavanSortBy } from './services/CavanService';
+import { GoogleMapsService, Location } from './services/GoogleMapsService';
+import { UserRepository } from './repositories/UserRepository';
 
 // --- Composition Root / Dependency Injection Container ---
 // In a larger application, this would be handled by a DI library like InversifyJS or TypeDI.
-const userRepo = new InMemoryRepository<User>();
-const caravanRepo = new InMemoryRepository<Caravan>();
+const userRepo = new UserRepository();
+const cavanRepo = new CavanRepository();
 const reservationRepo = new ReservationRepository();
+const googleMapsService = new GoogleMapsService(); // Instantiate the new service
 
-const reservationValidator = new ReservationValidator(reservationRepo, userRepo, caravanRepo);
-const reservationService = new ReservationService(reservationRepo, caravanRepo, reservationValidator);
+const reservationValidator = new ReservationValidator(reservationRepo, userRepo, cavanRepo);
+const reservationService = new ReservationService(reservationRepo, cavanRepo, reservationValidator);
+// Inject GoogleMapsService into CavanService
+const cavanService = new CavanService(cavanRepo, googleMapsService);
 // --- End of Composition Root ---
 
 // --- Pre-populate with some data for demonstration ---
@@ -22,15 +30,44 @@ const setupDemoData = async () => {
   console.log('Seeding database with demo data...');
   try {
     await userRepo.save({ id: 'guest-1', name: 'Test Guest', role: 'guest', contact: 'guest@test.com', isVerified: true });
-    await caravanRepo.save({ 
-      id: 'caravan-1',
+    await userRepo.save({ id: 'host-1', name: 'Host One', role: 'host', contact: 'host1@test.com', isVerified: true });
+    await userRepo.save({ id: 'host-2', name: 'Host Two', role: 'host', contact: 'host2@test.com', isVerified: true });
+    
+    await cavanRepo.save({ 
+      id: 'cavan-1',
+      name: 'Modern & Cozy Cavan',
       hostId: 'host-1',
       capacity: 4,
-      amenities: ['Kitchen', 'Wi-Fi'],
+      amenities: ['Kitchen', 'Wi-Fi', 'Air Conditioner'],
       photos: [],
-      location: 'Seoul, South Korea',
+      location: { lat: 37.5665, lng: 126.9780 }, // Seoul
       status: 'available',
-      dailyRate: 150
+      dailyRate: 150,
+      likes: 25,
+    });
+    await cavanRepo.save({ 
+      id: 'cavan-2',
+      name: 'Vintage Style Camper',
+      hostId: 'host-2',
+      capacity: 2,
+      amenities: ['Kitchen'],
+      photos: [],
+      location: { lat: 35.1796, lng: 129.0756 }, // Busan
+      status: 'available',
+      dailyRate: 120,
+      likes: 40,
+    });
+    await cavanRepo.save({ 
+      id: 'cavan-3',
+      name: 'Family Friendly RV',
+      hostId: 'host-1',
+      capacity: 6,
+      amenities: ['Kitchen', 'Wi-Fi', 'TV'],
+      photos: [],
+      location: { lat: 33.4996, lng: 126.5312 }, // Jeju
+      status: 'available',
+      dailyRate: 200,
+      likes: 15,
     });
     console.log('Demo data seeded successfully.');
   } catch (error) {
@@ -44,18 +81,48 @@ const app = express();
 app.use(express.json());
 
 // --- Routes ---
-app.post('/reservations', async (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/cavans', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { guestId, caravanId, startDate, endDate } = req.body;
+    const sortBy = (req.query.sortBy as CavanSortBy) || 'distance';
+    const lat = req.query.lat as string | undefined;
+    const lng = req.query.lng as string | undefined;
+    
+    // Basic validation for sortBy parameter
+    const validSortOptions: CavanSortBy[] = ['distance', 'likes', 'price'];
+    if (!validSortOptions.includes(sortBy)) {
+      return res.status(400).json({ message: `Invalid sortBy parameter. Must be one of: ${validSortOptions.join(', ')}` });
+    }
+
+    let origin: Location | undefined;
+    if (sortBy === 'distance') {
+      if (!lat || !lng) {
+        return res.status(400).json({ message: 'lat and lng query parameters are required for distance sorting.' });
+      }
+      origin = { lat: parseFloat(lat), lng: parseFloat(lng) };
+      if (isNaN(origin.lat) || isNaN(origin.lng)) {
+        return res.status(400).json({ message: 'Invalid lat or lng parameters. Must be numbers.' });
+      }
+    }
+    
+    const cavans = await cavanService.getCavans(sortBy, origin);
+    res.status(200).json(cavans);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/reservations', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { guestId, cavanId, startDate, endDate } = req.body;
     
     // Basic input validation
-    if (!guestId || !caravanId || !startDate || !endDate) {
-      return res.status(400).json({ message: 'Missing required fields: guestId, caravanId, startDate, endDate' });
+    if (!guestId || !cavanId || !startDate || !endDate) {
+      return res.status(400).json({ message: 'Missing required fields: guestId, cavanId, startDate, endDate' });
     }
     
     const request = {
       guestId,
-      caravanId,
+      cavanId,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
     };

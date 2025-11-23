@@ -3,7 +3,7 @@ export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled' | 'complet
 export interface Reservation {
   id: string;
   guestId: string; // foreign key to User
-  caravanId: string; // foreign key to Caravan
+  cavanId: string; // foreign key to Cavan
   startDate: Date;
   endDate: Date;
   status: ReservationStatus;

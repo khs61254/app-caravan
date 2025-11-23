@@ -1,5 +1,5 @@
 import { Reservation } from '@models/Reservation';
-import { Caravan } from '@models/Caravan';
+import { Cavan } from '@models/Cavan';
 import { IRepository } from '@repositories/IRepository';
 import { ReservationRepository } from '@repositories/ReservationRepository';
 import { ReservationValidator, ReservationRequest } from '@validators/ReservationValidator';
@@ -8,7 +8,7 @@ import { NotFoundException } from '@exceptions/NotFoundException';
 export class ReservationService {
   constructor(
     private readonly reservationRepo: ReservationRepository,
-    private readonly caravanRepo: IRepository<Caravan>,
+    private readonly cavanRepo: IRepository<Cavan>,
     private readonly reservationValidator: ReservationValidator,
   ) {}
 
@@ -22,13 +22,13 @@ export class ReservationService {
     await this.reservationValidator.validate(request);
 
     // 2. Calculate the price
-    const caravan = await this.caravanRepo.findById(request.caravanId);
-    if (!caravan) {
+    const cavan = await this.cavanRepo.findById(request.cavanId);
+    if (!cavan) {
       // This check is redundant due to the validator, but it satisfies the compiler
       // and adds a layer of defense.
-      throw new NotFoundException('Caravan', request.caravanId);
+      throw new NotFoundException('Cavan', request.cavanId);
     }
-    const totalPrice = this.calculatePrice(request.startDate, request.endDate, caravan.dailyRate);
+    const totalPrice = this.calculatePrice(request.startDate, request.endDate, cavan.dailyRate);
 
     // 3. Create the Reservation object (acting as a factory)
     const newReservation: Omit<Reservation, 'id'> = {

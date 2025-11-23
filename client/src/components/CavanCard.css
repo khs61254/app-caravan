@@ -1,0 +1,61 @@
+.cavan-card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cavan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.cavan-photo {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.cavan-info {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cavan-info h3 {
+  margin: 0;
+  font-size: 1.4em;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.cavan-distance {
+  font-size: 1em;
+  color: #7f8c8d;
+}
+
+.cavan-likes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1em;
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.heart-icon {
+  fill: #e74c3c;
+  width: 18px;
+  height: 18px;
+}
+
+.cavan-map {
+  width: 100%;
+  height: 200px; /* Adjust height as needed */
+  background-color: #e0e0e0; /* Placeholder background */
+}

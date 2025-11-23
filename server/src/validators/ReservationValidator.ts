@@ -2,7 +2,7 @@ import { Reservation } from '../models/Reservation';
 import { ReservationRepository } from '../repositories/ReservationRepository';
 import { IRepository } from '../repositories/IRepository';
 import { User } from '../models/User';
-import { Caravan } from '../models/Caravan';
+import { Cavan } from '../models/Cavan';
 import { ValidationException } from '../exceptions/ValidationException';
 import { NotFoundException } from '../exceptions/NotFoundException';
 
@@ -13,13 +13,13 @@ export class ReservationValidator {
   constructor(
     private readonly reservationRepo: ReservationRepository,
     private readonly userRepo: IRepository<User>,
-    private readonly caravanRepo: IRepository<Caravan>
+    private readonly cavanRepo: IRepository<Cavan>
   ) {}
 
   public async validate(request: ReservationRequest): Promise<void> {
-    await this.validateEntities(request.guestId, request.caravanId);
+    await this.validateEntities(request.guestId, request.cavanId);
     this.validateDates(request.startDate, request.endDate);
-    await this.validateNoConflicts(request.caravanId, request.startDate, request.endDate);
+    await this.validateNoConflicts(request.cavanId, request.startDate, request.endDate);
   }
 
   private validateDates(startDate: Date, endDate: Date): void {
@@ -32,27 +32,27 @@ export class ReservationValidator {
     // Here you could add more rules, like minimum/maximum rental duration.
   }
 
-  private async validateEntities(guestId: string, caravanId: string): Promise<void> {
+  private async validateEntities(guestId: string, cavanId: string): Promise<void> {
     const guest = await this.userRepo.findById(guestId);
     if (!guest) {
       throw new NotFoundException('User', guestId);
     }
 
-    const caravan = await this.caravanRepo.findById(caravanId);
-    if (!caravan) {
-      throw new NotFoundException('Caravan', caravanId);
+    const cavan = await this.cavanRepo.findById(cavanId);
+    if (!cavan) {
+      throw new NotFoundException('Cavan', cavanId);
     }
   }
 
-  private async validateNoConflicts(caravanId: string, startDate: Date, endDate: Date): Promise<void> {
-    const conflicts = await this.reservationRepo.findConflictsByCaravanId(
-      caravanId,
+  private async validateNoConflicts(cavanId: string, startDate: Date, endDate: Date): Promise<void> {
+    const conflicts = await this.reservationRepo.findConflictsByCavanId(
+      cavanId,
       startDate,
       endDate
     );
 
     if (conflicts.length > 0) {
-      throw new ValidationException('The caravan is already reserved for the selected dates.');
+      throw new ValidationException('The cavan is already reserved for the selected dates.');
     }
   }
 }

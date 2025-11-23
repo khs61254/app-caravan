@@ -1,7 +1,7 @@
 import { ReservationRepository } from '../src/repositories/ReservationRepository';
 import { InMemoryRepository } from '../src/repositories/InMemoryRepository';
 import { User } from '../src/models/User';
-import { Caravan } from '../src/models/Caravan';
+import { Cavan } from '../src/models/Cavan';
 import { ReservationValidator, ReservationRequest } from '../src/validators/ReservationValidator';
 import { ValidationException } from '../src/exceptions/ValidationException';
 import { NotFoundException } from '../src/exceptions/NotFoundException';
@@ -15,31 +15,31 @@ describe('ReservationValidator', () => {
   // Declare mocks with Jest's mock types
   let mockReservationRepo: jest.Mocked<ReservationRepository>;
   let mockUserRepo: jest.Mocked<InMemoryRepository<User>>;
-  let mockCaravanRepo: jest.Mocked<InMemoryRepository<Caravan>>;
+  let mockCavanRepo: jest.Mocked<InMemoryRepository<Cavan>>;
 
   beforeEach(() => {
     // Instantiate the mocked classes
     mockReservationRepo = new ReservationRepository() as jest.Mocked<ReservationRepository>;
     mockUserRepo = new InMemoryRepository<User>() as jest.Mocked<InMemoryRepository<User>>;
-    mockCaravanRepo = new InMemoryRepository<Caravan>() as jest.Mocked<InMemoryRepository<Caravan>>;
+    mockCavanRepo = new InMemoryRepository<Cavan>() as jest.Mocked<InMemoryRepository<Cavan>>;
 
     // Create a new validator instance for each test with the fresh mocks
-    validator = new ReservationValidator(mockReservationRepo, mockUserRepo, mockCaravanRepo);
+    validator = new ReservationValidator(mockReservationRepo, mockUserRepo, mockCavanRepo);
   });
 
   const baseTime = new Date();
   baseTime.setDate(baseTime.getDate() + 1); // Start tomorrow to avoid "in the past" error
   const validRequest: ReservationRequest = {
     guestId: 'user-1',
-    caravanId: 'caravan-1',
+    cavanId: 'cavan-1',
     startDate: baseTime,
     endDate: new Date(baseTime.getTime() + 2 * 24 * 60 * 60 * 1000), // 2 days later
   };
 
   it('should not throw an error for a valid request', async () => {
     mockUserRepo.findById.mockResolvedValue({ id: 'user-1' } as User);
-    mockCaravanRepo.findById.mockResolvedValue({ id: 'caravan-1' } as Caravan);
-    mockReservationRepo.findConflictsByCaravanId.mockResolvedValue([]);
+    mockCavanRepo.findById.mockResolvedValue({ id: 'cavan-1' } as Cavan);
+    mockReservationRepo.findConflictsByCavanId.mockResolvedValue([]);
 
     await expect(validator.validate(validRequest)).resolves.not.toThrow();
   });
@@ -47,7 +47,7 @@ describe('ReservationValidator', () => {
   it('should throw ValidationException if start date is after end date', async () => {
     // Arrange: Mock dependencies to let the test pass the entity validation step
     mockUserRepo.findById.mockResolvedValue({ id: 'user-1' } as User);
-    mockCaravanRepo.findById.mockResolvedValue({ id: 'caravan-1' } as Caravan);
+    mockCavanRepo.findById.mockResolvedValue({ id: 'cavan-1' } as Cavan);
 
     const invalidRequest = { ...validRequest, startDate: validRequest.endDate, endDate: validRequest.startDate };
     
@@ -58,7 +58,7 @@ describe('ReservationValidator', () => {
   it('should throw ValidationException if start date is in the past', async () => {
     // Arrange: Mock dependencies to let the test pass the entity validation step
     mockUserRepo.findById.mockResolvedValue({ id: 'user-1' } as User);
-    mockCaravanRepo.findById.mockResolvedValue({ id: 'caravan-1' } as Caravan);
+    mockCavanRepo.findById.mockResolvedValue({ id: 'cavan-1' } as Cavan);
 
     const invalidRequest = { ...validRequest, startDate: new Date('2000-01-01') };
     
@@ -68,23 +68,23 @@ describe('ReservationValidator', () => {
 
   it('should throw NotFoundException if user does not exist', async () => {
     mockUserRepo.findById.mockResolvedValue(null);
-    mockCaravanRepo.findById.mockResolvedValue({ id: 'caravan-1' } as Caravan);
+    mockCavanRepo.findById.mockResolvedValue({ id: 'cavan-1' } as Cavan);
     
     await expect(validator.validate(validRequest)).rejects.toThrow(new NotFoundException('User', 'user-1'));
   });
 
-  it('should throw NotFoundException if caravan does not exist', async () => {
+  it('should throw NotFoundException if cavan does not exist', async () => {
     mockUserRepo.findById.mockResolvedValue({ id: 'user-1' } as User);
-    mockCaravanRepo.findById.mockResolvedValue(null);
+    mockCavanRepo.findById.mockResolvedValue(null);
 
-    await expect(validator.validate(validRequest)).rejects.toThrow(new NotFoundException('Caravan', 'caravan-1'));
+    await expect(validator.validate(validRequest)).rejects.toThrow(new NotFoundException('Cavan', 'cavan-1'));
   });
 
   it('should throw ValidationException if there are conflicting reservations', async () => {
     mockUserRepo.findById.mockResolvedValue({ id: 'user-1' } as User);
-    mockCaravanRepo.findById.mockResolvedValue({ id: 'caravan-1' } as Caravan);
-    mockReservationRepo.findConflictsByCaravanId.mockResolvedValue([{ id: 'res-2' } as any]);
+    mockCavanRepo.findById.mockResolvedValue({ id: 'cavan-1' } as Cavan);
+    mockReservationRepo.findConflictsByCavanId.mockResolvedValue([{ id: 'res-2' } as any]);
 
-    await expect(validator.validate(validRequest)).rejects.toThrow(new ValidationException('The caravan is already reserved for the selected dates.'));
+    await expect(validator.validate(validRequest)).rejects.toThrow(new ValidationException('The cavan is already reserved for the selected dates.'));
   });
 });
