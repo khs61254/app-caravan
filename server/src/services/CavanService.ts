@@ -72,8 +72,11 @@ export class CavanService {
     host: User;
     transactions: number;
   }> {
+    console.log(`[CavanService] getCavanDetails called for cavanId: ${cavanId}`);
     const cavan = await this.cavanRepo.findById(cavanId, 'Cavan');
+    console.log(`[CavanService] Found cavan: ${cavan ? cavan.id : 'null'}`);
     const host = await this.userRepo.findById(cavan.hostId, 'Host');
+    console.log(`[CavanService] Found host: ${host ? host.id : 'null'}`);
 
     const hostCavans = await this.cavanRepo.findByHostId(host.id);
     const hostCavanIds = hostCavans.map((c) => c.id);
@@ -87,5 +90,22 @@ export class CavanService {
       host,
       transactions,
     };
+  }
+
+  async createCavan(cavanData: {
+    name: string;
+    dailyRate: number;
+    location: { lat: number; lng: number };
+    hostId: string;
+    capacity: number;
+    amenities: string[];
+    photos: string[];
+  }): Promise<Cavan> {
+    const newCavan: Omit<Cavan, 'id'> = {
+      ...cavanData,
+      status: 'available',
+      likes: 0,
+    };
+    return this.cavanRepo.save(newCavan);
   }
 }

@@ -13,6 +13,7 @@ import { GoogleMapsService, Location } from './services/GoogleMapsService';
 import { UserRepository } from './repositories/UserRepository';
 import { AuthService } from './services/AuthService';
 import { createAuthRouter } from './controllers/AuthController';
+import { createCavanRouter } from './controllers/CavanController';
 
 // --- Composition Root / Dependency Injection Container ---
 // In a larger application, this would be handled by a DI library like InversifyJS or TypeDI.
@@ -98,6 +99,7 @@ app.use(express.json());
 
 // --- Routes ---
 app.use('/api/auth', createAuthRouter(authService));
+app.use('/api/cavans', createCavanRouter(cavanService));
 
 app.get('/api/cavans', async (req: Request, res: Response, next: NextFunction) => {
   try {

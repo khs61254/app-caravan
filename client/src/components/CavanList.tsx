@@ -25,9 +25,10 @@ interface UserLocation {
 
 interface CavanListProps {
   isGoogleMapsLoaded: boolean;
+  refreshKey?: number;
 }
 
-const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded }) => {
+const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey }) => {
   const [cavans, setCavans] = useState<Cavan[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,12 +128,12 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded }) => {
     };
 
     fetchCavans();
-  }, [userLocation, page]); // Re-fetch when userLocation changes or page changes (for infinite scroll)
+  }, [userLocation, page, refreshKey]); // Re-fetch when userLocation, page or refreshKey changes
 
   if (error) {
     return <div className="error-message">{error}</div>;
   }
-
+  
   return (
     <div className="cavan-list-container">
       {cavans.length === 0 && !loading && !error && (
@@ -140,36 +141,31 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded }) => {
       )}
       <div className="cavan-grid">
         {cavans.map((cavan, index) => {
-          // Use the ref for the last element to trigger infinite scroll
+          const card = (
+            <CavanCard
+              id={cavan.id}
+              name={cavan.name}
+              photo={cavan.photos[0] || 'https://via.placeholder.com/300x180?text=No+Image'}
+              distance={cavan.distance ? `${Math.round(cavan.distance)} km` : 'N/A'}
+              likes={cavan.likes}
+              location={cavan.location}
+              isGoogleMapsLoaded={isGoogleMapsLoaded}
+              onClick={() => handleCardClick(cavan.id)}
+              onLike={handleLike}
+            />
+          );
+
           if (cavans.length === index + 1) {
             return (
-              <div ref={lastCavanElementRef} key={cavan.id} onClick={() => handleCardClick(cavan.id)}>
-                <CavanCard
-                  id={cavan.id}
-                  name={cavan.name}
-                  photo={cavan.photos[0] || 'https://via.placeholder.com/300x180?text=No+Image'} // Default image if none
-                  distance={cavan.distance ? `${Math.round(cavan.distance)} km` : 'N/A'} // Assuming distance in km from API
-                  likes={cavan.likes}
-                  location={cavan.location} // Pass location
-                  isGoogleMapsLoaded={isGoogleMapsLoaded} // Pass Google Maps loaded status
-                  onLike={handleLike}
-                />
+              <div ref={lastCavanElementRef} key={cavan.id}>
+                {card}
               </div>
             );
           } else {
             return (
-              <CavanCard
-                key={cavan.id}
-                id={cavan.id}
-                name={cavan.name}
-                photo={cavan.photos[0] || 'https://via.placeholder.com/300x180?text=No+Image'}
-                distance={cavan.distance ? `${Math.round(cavan.distance)} km` : 'N/A'}
-                likes={cavan.likes}
-                location={cavan.location} // Pass location
-                isGoogleMapsLoaded={isGoogleMapsLoaded} // Pass Google Maps loaded status
-                onClick={() => handleCardClick(cavan.id)}
-                onLike={handleLike}
-              />
+              <div key={cavan.id}>
+                {card}
+              </div>
             );
           }
         })}
@@ -181,5 +177,4 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded }) => {
     </div>
   );
 };
-
 export default CavanList;
