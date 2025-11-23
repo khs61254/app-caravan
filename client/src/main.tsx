@@ -1,29 +1,40 @@
-import React, { useState, useEffect } from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import App from './App';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
+import './index.css';
 
 const Main = () => {
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
 
   useEffect(() => {
-    // Define the global initMap function
     window.initMap = () => {
       setIsGoogleMapsLoaded(true);
       console.log('Google Maps API loaded!');
     };
 
-    // Clean up the global function when the component unmounts
-    // For initMap, which is called once, cleanup is less critical but good practice.
     return () => {
-      // If we were creating event listeners or other resources, we'd clean them up here.
-      // delete window.initMap; // Option to remove it, or set to a no-op.
+      // delete window.initMap;
     };
-  }, []); // Run only once on mount
+  }, []);
 
   return (
     <React.StrictMode>
-      <App isGoogleMapsLoaded={isGoogleMapsLoaded} />
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<App isGoogleMapsLoaded={isGoogleMapsLoaded} />} />
+            </Route>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </React.StrictMode>
   );
 };

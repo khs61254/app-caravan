@@ -11,6 +11,8 @@ import { CavanRepository } from './repositories/CavanRepository';
 import { CavanService, CavanSortBy } from './services/CavanService';
 import { GoogleMapsService, Location } from './services/GoogleMapsService';
 import { UserRepository } from './repositories/UserRepository';
+import { AuthService } from './services/AuthService';
+import { createAuthRouter } from './controllers/AuthController';
 
 // --- Composition Root / Dependency Injection Container ---
 // In a larger application, this would be handled by a DI library like InversifyJS or TypeDI.
@@ -18,6 +20,7 @@ const userRepo = new UserRepository();
 const cavanRepo = new CavanRepository();
 const reservationRepo = new ReservationRepository();
 const googleMapsService = new GoogleMapsService(); // Instantiate the new service
+const authService = new AuthService(userRepo);
 
 const reservationValidator = new ReservationValidator(reservationRepo, userRepo, cavanRepo);
 const reservationService = new ReservationService(reservationRepo, cavanRepo, reservationValidator);
@@ -29,14 +32,15 @@ const cavanService = new CavanService(cavanRepo, userRepo, reservationRepo, goog
 const setupDemoData = async () => {
   console.log('Seeding database with demo data...');
   try {
-    await userRepo.save({ id: 'guest-1', name: 'Test Guest', role: 'guest', contact: 'guest@test.com', isVerified: true, photoUrl: 'https://i.pravatar.cc/150?u=guest-1' });
-    await userRepo.save({ id: 'host-1', name: 'Host One', role: 'host', contact: 'host1@test.com', isVerified: true, photoUrl: 'https://i.pravatar.cc/150?u=host-1' });
-    await userRepo.save({ id: 'host-2', name: 'Host Two', role: 'host', contact: 'host2@test.com', isVerified: true, photoUrl: 'https://i.pravatar.cc/150?u=host-2' });
+    // Register users and get their new IDs
+    const guest = await authService.register({ name: 'Test Guest', email: 'guest@test.com', password: 'password' });
+    const host1 = await authService.register({ name: 'Host One', email: 'host1@test.com', password: 'password', role: 'host' });
+    const host2 = await authService.register({ name: 'Host Two', email: 'host2@test.com', password: 'password', role: 'host' });
     
     await cavanRepo.save({ 
       id: 'cavan-1',
       name: 'Modern & Cozy Cavan',
-      hostId: 'host-1',
+      hostId: host1.id, // Use the new host ID
       capacity: 4,
       amenities: ['Kitchen', 'Wi-Fi', 'Air Conditioner'],
       photos: [
@@ -52,7 +56,7 @@ const setupDemoData = async () => {
     await cavanRepo.save({ 
       id: 'cavan-2',
       name: 'Vintage Style Camper',
-      hostId: 'host-2',
+      hostId: host2.id, // Use the new host ID
       capacity: 2,
       amenities: ['Kitchen'],
       photos: [
@@ -68,7 +72,7 @@ const setupDemoData = async () => {
     await cavanRepo.save({ 
       id: 'cavan-3',
       name: 'Family Friendly RV',
-      hostId: 'host-1',
+      hostId: host1.id, // Use the new host ID
       capacity: 6,
       amenities: ['Kitchen', 'Wi-Fi', 'TV'],
       photos: [
@@ -93,6 +97,8 @@ const app = express();
 app.use(express.json());
 
 // --- Routes ---
+app.use('/api/auth', createAuthRouter(authService));
+
 app.get('/api/cavans', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const sortBy = (req.query.sortBy as CavanSortBy) || 'distance';
@@ -158,7 +164,7 @@ app.post('/api/reservations', async (req: Request, res: Response, next: NextFunc
 
 // --- Global Error Handler Middleware ---
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err);
+  console.error(`Error: ${err.name} - ${err.message}\nStack: ${err.stack}`);
   if (err instanceof ApplicationException) {
     res.status(err.status).json({ name: err.name, message: err.message });
   } else {

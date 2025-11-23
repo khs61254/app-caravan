@@ -3,6 +3,8 @@ export type UserRole = 'host' | 'guest';
 export interface User {
   id: string;
   name: string;
+  email: string;
+  password?: string; // Should not be sent to client
   photoUrl: string;
   contact: string;
   role: UserRole;

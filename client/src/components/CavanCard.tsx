@@ -40,6 +40,12 @@ const CavanCard: React.FC<CavanCardProps> = ({
         map: map,
         title: name,
       });
+
+      // Trigger a resize event to ensure the map renders correctly
+      setTimeout(() => {
+        window.google.maps.event.trigger(map, 'resize');
+        map.setCenter({ lat: location.lat, lng: location.lng });
+      }, 100); // A small delay to ensure the container is visible
     }
   }, [isMapVisible, isGoogleMapsLoaded, location, name]); // Re-run effect if these dependencies change
 
