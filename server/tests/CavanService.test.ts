@@ -2,15 +2,21 @@ import { CavanService, CavanSortBy, CavanWithDistance } from '../src/services/Ca
 import { CavanRepository } from '../src/repositories/CavanRepository';
 import { GoogleMapsService, Location } from '../src/services/GoogleMapsService';
 import { Cavan } from '../src/models/Cavan';
+import { UserRepository } from '../src/repositories/UserRepository'; // Import UserRepository
+import { ReservationRepository } from '../src/repositories/ReservationRepository'; // Import ReservationRepository
 
 // Mock the dependencies
 jest.mock('../src/repositories/CavanRepository');
 jest.mock('../src/services/GoogleMapsService');
+jest.mock('../src/repositories/UserRepository'); // Mock UserRepository
+jest.mock('../src/repositories/ReservationRepository'); // Mock ReservationRepository
 
 describe('CavanService', () => {
   let service: CavanService;
   let mockCavanRepo: jest.Mocked<CavanRepository>;
   let mockGoogleMapsService: jest.Mocked<GoogleMapsService>;
+  let mockUserRepo: jest.Mocked<UserRepository>; // Declare mockUserRepo
+  let mockReservationRepo: jest.Mocked<ReservationRepository>; // Declare mockReservationRepo
 
   // Sample data to be used across tests
   const mockCavans: Cavan[] = [
@@ -23,8 +29,11 @@ describe('CavanService', () => {
     // Create new mock instances for each test
     mockCavanRepo = new CavanRepository() as jest.Mocked<CavanRepository>;
     mockGoogleMapsService = new GoogleMapsService() as jest.Mocked<GoogleMapsService>;
+    mockUserRepo = new UserRepository() as jest.Mocked<UserRepository>; // Initialize mockUserRepo
+    mockReservationRepo = new ReservationRepository() as jest.Mocked<ReservationRepository>; // Initialize mockReservationRepo
     
-    service = new CavanService(mockCavanRepo, mockGoogleMapsService);
+    // Pass all dependencies to the CavanService constructor
+    service = new CavanService(mockCavanRepo, mockUserRepo, mockReservationRepo, mockGoogleMapsService);
 
     // Default mock implementation
     mockCavanRepo.findAll.mockResolvedValue([...mockCavans]);

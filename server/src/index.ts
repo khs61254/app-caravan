@@ -14,6 +14,16 @@ import { UserRepository } from './repositories/UserRepository';
 import { AuthService } from './services/AuthService';
 import { createAuthRouter } from './controllers/AuthController';
 import { createCavanRouter } from './controllers/CavanController';
+import { authMiddleware } from './middleware/authMiddleware';
+
+// Extend the Request object to include a user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: Omit<User, 'password'>;
+    }
+  }
+}
 
 // --- Composition Root / Dependency Injection Container ---
 // In a larger application, this would be handled by a DI library like InversifyJS or TypeDI.
@@ -97,10 +107,39 @@ const setupDemoData = async () => {
 const app = express();
 app.use(express.json());
 
-// --- Routes ---
-app.use('/api/auth', createAuthRouter(authService));
-app.use('/api/cavans', createCavanRouter(cavanService));
+// Initialize authMiddleware with userRepo
+const authenticate = authMiddleware(userRepo);
 
+// --- Routes ---
+app.use('/api/auth', createAuthRouter(authService, userRepo));
+app.use('/api/cavans', authenticate, createCavanRouter(cavanService)); // Apply authentication to cavan routes
+app.post('/api/reservations', authenticate, async (req: Request, res: Response, next: NextFunction) => { // Apply authentication to reservation creation
+  try {
+    const { cavanId, startDate, endDate } = req.body;
+    const guestId = req.user?.id; // guestId from authenticated user
+
+    if (!guestId) {
+      return res.status(401).json({ message: 'Authentication required for reservation' });
+    }
+    
+    // Basic input validation
+    if (!cavanId || !startDate || !endDate) {
+      return res.status(400).json({ message: 'Missing required fields: cavanId, startDate, endDate' });
+    }
+    
+    const request = {
+      guestId,
+      cavanId,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+    };
+
+    const newReservation = await reservationService.createReservation(request);
+    res.status(201).json(newReservation);
+  } catch (error) {
+    next(error); // Pass error to the global error handler
+  }
+});
 app.get('/api/cavans', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const sortBy = (req.query.sortBy as CavanSortBy) || 'distance';
@@ -141,28 +180,6 @@ app.get('/api/cavans/:id', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-app.post('/api/reservations', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { guestId, cavanId, startDate, endDate } = req.body;
-    
-    // Basic input validation
-    if (!guestId || !cavanId || !startDate || !endDate) {
-      return res.status(400).json({ message: 'Missing required fields: guestId, cavanId, startDate, endDate' });
-    }
-    
-    const request = {
-      guestId,
-      cavanId,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-    };
-
-    const newReservation = await reservationService.createReservation(request);
-    res.status(201).json(newReservation);
-  } catch (error) {
-    next(error); // Pass error to the global error handler
-  }
-});
 
 // --- Global Error Handler Middleware ---
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -185,3 +202,4 @@ const startServer = async () => {
 };
 
 startServer();
+

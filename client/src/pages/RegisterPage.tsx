@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import './LoginPage.css'; // Reuse the same CSS
 
 const RegisterPage: React.FC = () => {
@@ -8,6 +9,7 @@ const RegisterPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { user, isLoading } = useAuth(); // Use the auth context
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +32,32 @@ const RegisterPage: React.FC = () => {
       setError(err.message || 'Failed to register. Please try again.');
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-form-container">
+          <h2>Loading...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="auth-page">
+        <div className="auth-form-container">
+          <h2>You are already registered!</h2>
+          <p>Name: {user.name}</p>
+          <p>Email: {user.email}</p>
+          <button onClick={() => navigate('/')} className="auth-button">Go to Home</button>
+          <p className="auth-switch-link">
+            Not {user.name}? <Link to="/login">Login with another account</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page">
