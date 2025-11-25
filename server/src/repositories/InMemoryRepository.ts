@@ -22,6 +22,7 @@ export class InMemoryRepository<T extends { id: string }> implements IRepository
     // In a real 'save' or 'create' method, you might throw if the ID exists.
     // For this generic repo, we'll allow upsert-like behavior.
     const newEntity = { ...entity, id } as T;
+    console.log('Saving entity:', newEntity); // DEBUGGING
     this.entities.set(id, newEntity);
     return { ...newEntity };
   }

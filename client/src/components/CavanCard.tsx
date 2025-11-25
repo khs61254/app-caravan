@@ -4,13 +4,15 @@ import './CavanCard.css';
 interface CavanCardProps {
   id: string;
   name: string;
-  photo: string; // Assuming a photo URL
-  distance: string; // e.g., "100 km" or "500 m"
+  photo: string;
+  distance: string;
   likes: number;
-  location: { lat: number; lng: number }; // Add location property
-  isGoogleMapsLoaded: boolean; // Prop to indicate if Google Maps API is loaded
+  location: { lat: number; lng: number };
+  isGoogleMapsLoaded: boolean;
   onClick: () => void;
-  onLike: (id: string) => void;
+  onLike?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  showDelete?: boolean;
 }
 
 const CavanCard: React.FC<CavanCardProps> = ({
@@ -23,16 +25,18 @@ const CavanCard: React.FC<CavanCardProps> = ({
   isGoogleMapsLoaded,
   onClick,
   onLike,
+  onDelete,
+  showDelete = false,
 }) => {
-  const mapRef = useRef<HTMLDivElement>(null); // Create a ref for the map container
-  const [isMapVisible, setIsMapVisible] = useState(false); // State to toggle map
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [isMapVisible, setIsMapVisible] = useState(false);
 
   useEffect(() => {
     if (isMapVisible && isGoogleMapsLoaded && mapRef.current && window.google && window.google.maps) {
       const map = new window.google.maps.Map(mapRef.current, {
         center: { lat: location.lat, lng: location.lng },
-        zoom: 12, // Adjust zoom level as needed
-        disableDefaultUI: true, // Optional: disable default UI controls
+        zoom: 12,
+        disableDefaultUI: true,
       });
 
       new window.google.maps.Marker({
@@ -41,21 +45,29 @@ const CavanCard: React.FC<CavanCardProps> = ({
         title: name,
       });
 
-      // Trigger a resize event to ensure the map renders correctly
       setTimeout(() => {
         window.google.maps.event.trigger(map, 'resize');
         map.setCenter({ lat: location.lat, lng: location.lng });
-      }, 100); // A small delay to ensure the container is visible
+      }, 100);
     }
-  }, [isMapVisible, isGoogleMapsLoaded, location, name]); // Re-run effect if these dependencies change
+  }, [isMapVisible, isGoogleMapsLoaded, location, name]);
 
   const handleLikeClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent the card's onClick from firing
-    onLike(id);
+    e.stopPropagation();
+    if (onLike) {
+      onLike(id);
+    }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(id);
+    }
   };
 
   const toggleMap = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent the card's onClick from firing
+    e.stopPropagation();
     setIsMapVisible(!isMapVisible);
   };
 
@@ -67,19 +79,26 @@ const CavanCard: React.FC<CavanCardProps> = ({
         <h3>{name}</h3>
         <p className="cavan-distance">{distance}</p>
         <div className="cavan-controls">
-          <div className="cavan-likes" onClick={handleLikeClick}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="heart-icon"
-            >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-            </svg>
-            <span>{likes}</span>
-          </div>
+          {onLike && (
+            <div className="cavan-likes" onClick={handleLikeClick}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="heart-icon"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+              <span>{likes}</span>
+            </div>
+          )}
+          {showDelete && onDelete && (
+            <button className="delete-button" onClick={handleDeleteClick}>
+              Delete
+            </button>
+          )}
           <button className="map-button" onClick={toggleMap}>
             {isMapVisible ? 'Photo' : 'Map'}
           </button>

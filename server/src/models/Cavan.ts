@@ -13,5 +13,5 @@ export interface Cavan {
   };
   status: CavanStatus;
   dailyRate: number; // Price per day
-  likes: number;
+  likedBy: string[];
 }

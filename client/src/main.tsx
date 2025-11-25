@@ -6,6 +6,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
+import Layout from './components/Layout';
+import MyCavansPage from './pages/MyCavansPage';
+import LikedCavansPage from './pages/LikedCavansPage';
 import './index.css';
 
 const Main = () => {
@@ -47,8 +50,10 @@ const Main = () => {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
               <Route path="/" element={<App isGoogleMapsLoaded={isGoogleMapsLoaded} />} />
+              <Route path="/my-cavans" element={<MyCavansPage />} />
+              <Route path="/liked-cavans" element={<LikedCavansPage />} />
             </Route>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import CavanCard from './CavanCard';
 import './CavanList.css';
 import { CavanDetailModal } from './CavanDetailModal';
+import { useAuth } from '../contexts/AuthContext';
 
 // Define the Cavan type based on backend API response
 interface Cavan {
@@ -14,7 +15,7 @@ interface Cavan {
   location: { lat: number; lng: number };
   status: string;
   dailyRate: number;
-  likes: number;
+  likedBy: string[];
   distance?: number; // Distance is an optional field calculated by the backend
 }
 
@@ -36,6 +37,7 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [selectedCavanId, setSelectedCavanId] = useState<string | null>(null);
+  const { user, token } = useAuth();
 
   const handleCardClick = (cavanId: string) => {
     setSelectedCavanId(cavanId);
@@ -45,13 +47,44 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
     setSelectedCavanId(null);
   };
 
-  const handleLike = (cavanId: string) => {
-    setCavans((prevCavans) =>
-      prevCavans.map((cavan) =>
-        cavan.id === cavanId ? { ...cavan, likes: cavan.likes + 1 } : cavan,
-      ),
-    );
+  const handleLike = async (cavanId: string) => {
+    if (!user) {
+      alert('You must be logged in to like a cavan.');
+      return;
+    }
+
+    try {
+      // Optimistically update the UI
+      setCavans(prevCavans =>
+        prevCavans.map(cavan => {
+          if (cavan.id === cavanId) {
+            const likedBy = cavan.likedBy || []; // Defensive guard
+            const isLiked = likedBy.includes(user.id);
+            if (isLiked) {
+              return {
+                ...cavan,
+                likedBy: likedBy.filter(id => id !== user.id),
+              };
+            } else {
+              return { ...cavan, likedBy: [...likedBy, user.id] };
+            }
+          }
+          return cavan;
+        }),
+      );
+
+      await fetch(`/api/cavans/${cavanId}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    } catch (err) {
+      // Revert the optimistic update on error if needed
+      console.error('Failed to update like status', err);
+    }
   };
+
 
   const observer = useRef<IntersectionObserver>();
   const lastCavanElementRef = useCallback(
@@ -141,13 +174,16 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
       )}
       <div className="cavan-grid">
         {cavans.map((cavan, index) => {
+          if (!cavan.likedBy) {
+            console.error('Cavan object is missing likedBy property:', cavan);
+          }
           const card = (
             <CavanCard
               id={cavan.id}
               name={cavan.name}
               photo={cavan.photos[0] || 'https://via.placeholder.com/300x180?text=No+Image'}
               distance={cavan.distance ? `${Math.round(cavan.distance)} km` : 'N/A'}
-              likes={cavan.likes}
+              likes={(cavan.likedBy || []).length}
               location={cavan.location}
               isGoogleMapsLoaded={isGoogleMapsLoaded}
               onClick={() => handleCardClick(cavan.id)}

@@ -1,20 +1,20 @@
 import { useState } from 'react';
-import './App.css'
-import CavanList from './components/CavanList';
-import ChatIcon from './components/ChatIcon';
-import ChatWindow from './components/ChatWindow';
-import { useAuth } from './contexts/AuthContext';
-import CavanRegisterModal from './components/CavanRegisterModal';
-import './components/CavanRegisterModal.css';
+import CavanList from '../components/CavanList';
+import ChatIcon from '../components/ChatIcon';
+import ChatWindow from '../components/ChatWindow';
+import { useAuth } from '../contexts/AuthContext';
+import CavanRegisterModal from '../components/CavanRegisterModal';
+import '../components/CavanRegisterModal.css';
 
-interface AppProps {
+
+interface HomePageProps {
   isGoogleMapsLoaded: boolean;
 }
 
-function App({ isGoogleMapsLoaded }: AppProps) {
+function HomePage({ isGoogleMapsLoaded }: HomePageProps) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, token } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const toggleChat = () => {
@@ -26,7 +26,8 @@ function App({ isGoogleMapsLoaded }: AppProps) {
       alert('You must be logged in to register a cavan.');
       return;
     }
-
+    
+    // This logic should ideally be in an API service file
     const [lat, lng] = cavanData.location.split(',').map(parseFloat);
     if (isNaN(lat) || isNaN(lng)) {
       alert('Invalid location format. Please use "lat,lng".');
@@ -36,7 +37,7 @@ function App({ isGoogleMapsLoaded }: AppProps) {
     const newCavan = {
       ...cavanData,
       location: { lat, lng },
-      hostId: user.id,
+      // hostId is now set on the server
     };
 
     try {
@@ -44,6 +45,7 @@ function App({ isGoogleMapsLoaded }: AppProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(newCavan),
       });
@@ -61,7 +63,7 @@ function App({ isGoogleMapsLoaded }: AppProps) {
   };
 
   return (
-    <div className="App">
+    <>
       <CavanList isGoogleMapsLoaded={isGoogleMapsLoaded} refreshKey={refreshKey} />
       <ChatIcon onClick={toggleChat} />
       {isChatOpen && <ChatWindow onClose={toggleChat} />}
@@ -74,8 +76,8 @@ function App({ isGoogleMapsLoaded }: AppProps) {
           onRegister={handleRegister}
         />
       )}
-    </div>
+    </>
   )
 }
 
-export default App
+export default HomePage;

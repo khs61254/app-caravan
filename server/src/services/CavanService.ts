@@ -31,31 +31,30 @@ export class CavanService {
   ): Promise<Cavan[]> {
     const cavans = await this.cavanRepo.findAll();
 
+    // First, map all cavans to include a distance property, calculated or null.
+    let cavansWithDistance: CavanWithDistance[] = await Promise.all(cavans.map(async (cavan) => {
+        let distance: number | null = null;
+        if (origin) {
+            // In a real app, you'd want to be more efficient than calling this for every single cavan.
+            // But for this demo, it's a straightforward approach.
+            const distances = await this.googleMapsService.calculateDistances(origin, [cavan]);
+            distance = distances[0];
+        }
+        return { ...cavan, distance };
+    }));
+
+    // Now, sort the enriched cavan objects
     switch (sortBy) {
       case 'price':
-        // Sort by dailyRate in ascending order (cheapest first)
-        return cavans.sort((a, b) => a.dailyRate - b.dailyRate);
+        return cavansWithDistance.sort((a, b) => a.dailyRate - b.dailyRate);
       
       case 'likes':
-        // Sort by likes in descending order (most liked first)
-        return cavans.sort((a, b) => b.likes - a.likes);
+        return cavansWithDistance.sort((a, b) => b.likedBy.length - a.likedBy.length);
 
       case 'distance':
         if (!origin) {
-          // If no origin is provided for distance sort, return unsorted.
-          // Or we could throw an error: throw new Error('Origin is required for distance sorting.');
-          return cavans;
+          return cavans; // Return original cavans if no origin for distance sort
         }
-
-        const distances = await this.googleMapsService.calculateDistances(origin, cavans);
-        
-        const cavansWithDistance: CavanWithDistance[] = cavans.map((cavan, index) => ({
-          ...cavan,
-          distance: distances[index],
-        }));
-
-        // Sort by distance in ascending order (closest first).
-        // Cavans with a null distance (e.g., API error) are pushed to the end.
         return cavansWithDistance.sort((a, b) => {
           if (a.distance === null) return 1;
           if (b.distance === null) return -1;
@@ -63,7 +62,7 @@ export class CavanService {
         });
 
       default:
-        return cavans;
+        return cavansWithDistance;
     }
   }
 
@@ -104,8 +103,43 @@ export class CavanService {
     const newCavan: Omit<Cavan, 'id'> = {
       ...cavanData,
       status: 'available',
-      likes: 0,
+      likedBy: [],
     };
     return this.cavanRepo.save(newCavan);
+  }
+
+  async toggleLike(cavanId: string, userId: string): Promise<Cavan> {
+    const cavan = await this.cavanRepo.findById(cavanId, 'Cavan');
+    const userIndex = cavan.likedBy.indexOf(userId);
+
+    if (userIndex > -1) {
+      // User has already liked the cavan, so unlike it
+      cavan.likedBy.splice(userIndex, 1);
+    } else {
+      // User has not liked the cavan, so like it
+      cavan.likedBy.push(userId);
+    }
+
+    return this.cavanRepo.save(cavan);
+  }
+
+  async getLikedCavans(userId: string): Promise<Cavan[]> {
+    return this.cavanRepo.findLikedBy(userId);
+  }
+
+  async getRegisteredCavans(userId: string): Promise<Cavan[]> {
+    return this.cavanRepo.findByHostId(userId);
+  }
+
+  async deleteCavan(cavanId: string, userId: string): Promise<boolean> {
+    const cavan = await this.cavanRepo.findById(cavanId, 'Cavan');
+
+    if (cavan.hostId !== userId) {
+      // In a real application, you might use a more specific error type,
+      // e.g., ForbiddenException
+      throw new Error('User is not authorized to delete this cavan');
+    }
+
+    return this.cavanRepo.delete(cavanId);
   }
 }

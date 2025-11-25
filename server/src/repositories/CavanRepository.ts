@@ -11,4 +11,14 @@ export class CavanRepository extends InMemoryRepository<Cavan> {
     }
     return cavans;
   }
+
+  async findLikedBy(userId: string): Promise<Cavan[]> {
+    const cavans: Cavan[] = [];
+    for (const cavan of this.entities.values()) {
+      if (cavan.likedBy.includes(userId)) {
+        cavans.push({ ...cavan });
+      }
+    }
+    return cavans;
+  }
 }

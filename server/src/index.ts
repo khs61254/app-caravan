@@ -41,6 +41,7 @@ const cavanService = new CavanService(cavanRepo, userRepo, reservationRepo, goog
 
 // --- Pre-populate with some data for demonstration ---
 const setupDemoData = async () => {
+  console.log('--- SERVER STARTUP: SEEDING DATABASE WITH DEMO DATA ---');
   console.log('Seeding database with demo data...');
   try {
     // Register users and get their new IDs
@@ -62,7 +63,7 @@ const setupDemoData = async () => {
       location: { lat: 37.5665, lng: 126.9780 }, // Seoul
       status: 'available',
       dailyRate: 150,
-      likes: 25,
+      likedBy: [guest.id],
     });
     await cavanRepo.save({ 
       id: 'cavan-2',
@@ -78,7 +79,7 @@ const setupDemoData = async () => {
       location: { lat: 35.1796, lng: 129.0756 }, // Busan
       status: 'available',
       dailyRate: 120,
-      likes: 40,
+      likedBy: [guest.id],
     });
     await cavanRepo.save({ 
       id: 'cavan-3',
@@ -94,7 +95,7 @@ const setupDemoData = async () => {
       location: { lat: 33.4996, lng: 126.5312 }, // Jeju
       status: 'available',
       dailyRate: 200,
-      likes: 15,
+      likedBy: [],
     });
     console.log('Demo data seeded successfully.');
   } catch (error) {
@@ -112,7 +113,7 @@ const authenticate = authMiddleware(userRepo);
 
 // --- Routes ---
 app.use('/api/auth', createAuthRouter(authService, userRepo));
-app.use('/api/cavans', authenticate, createCavanRouter(cavanService)); // Apply authentication to cavan routes
+app.use('/api/cavans', createCavanRouter(cavanService, userRepo)); // Apply authentication to cavan routes // Apply authentication to cavan routes
 app.post('/api/reservations', authenticate, async (req: Request, res: Response, next: NextFunction) => { // Apply authentication to reservation creation
   try {
     const { cavanId, startDate, endDate } = req.body;
@@ -138,45 +139,6 @@ app.post('/api/reservations', authenticate, async (req: Request, res: Response, 
     res.status(201).json(newReservation);
   } catch (error) {
     next(error); // Pass error to the global error handler
-  }
-});
-app.get('/api/cavans', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const sortBy = (req.query.sortBy as CavanSortBy) || 'distance';
-    const lat = req.query.lat as string | undefined;
-    const lng = req.query.lng as string | undefined;
-    
-    // Basic validation for sortBy parameter
-    const validSortOptions: CavanSortBy[] = ['distance', 'likes', 'price'];
-    if (!validSortOptions.includes(sortBy)) {
-      return res.status(400).json({ message: `Invalid sortBy parameter. Must be one of: ${validSortOptions.join(', ')}` });
-    }
-
-    let origin: Location | undefined;
-    if (sortBy === 'distance') {
-      if (!lat || !lng) {
-        return res.status(400).json({ message: 'lat and lng query parameters are required for distance sorting.' });
-      }
-      origin = { lat: parseFloat(lat), lng: parseFloat(lng) };
-      if (isNaN(origin.lat) || isNaN(origin.lng)) {
-        return res.status(400).json({ message: 'Invalid lat or lng parameters. Must be numbers.' });
-      }
-    }
-    
-    const cavans = await cavanService.getCavans(sortBy, origin);
-    res.status(200).json(cavans);
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.get('/api/cavans/:id', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const details = await cavanService.getCavanDetails(id);
-    res.status(200).json(details);
-  } catch (error) {
-    next(error);
   }
 });
 
