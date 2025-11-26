@@ -8,8 +8,9 @@ import { GoogleMapsService, Location } from './GoogleMapsService';
 
 export type CavanSortBy = 'distance' | 'likes' | 'price';
 
-// A temporary type to hold cavan data along with its calculated distance
-export type CavanWithDistance = Cavan & { distance: number | null };
+// A temporary type to hold cavan data along with its calculated distance and transaction count
+export type CavanWithDetails = Cavan & { distance: number | null, transactionCount: number };
+
 
 export class CavanService {
   constructor(
@@ -28,41 +29,49 @@ export class CavanService {
   async getCavans(
     sortBy: CavanSortBy = 'distance',
     origin?: Location,
-  ): Promise<Cavan[]> {
+  ): Promise<CavanWithDetails[]> {
     const cavans = await this.cavanRepo.findAll();
 
-    // First, map all cavans to include a distance property, calculated or null.
-    let cavansWithDistance: CavanWithDistance[] = await Promise.all(cavans.map(async (cavan) => {
+    let enrichedCavans: CavanWithDetails[];
+
+    // Always enrich cavans with distance (if origin provided) and transaction count
+    enrichedCavans = await Promise.all(
+      cavans.map(async (cavan) => {
         let distance: number | null = null;
         if (origin) {
-            // In a real app, you'd want to be more efficient than calling this for every single cavan.
-            // But for this demo, it's a straightforward approach.
-            const distances = await this.googleMapsService.calculateDistances(origin, [cavan]);
-            distance = distances[0];
+          const distances = await this.googleMapsService.calculateDistances(origin, [cavan]);
+          distance = distances[0];
         }
-        return { ...cavan, distance };
-    }));
-
-    // Now, sort the enriched cavan objects
+        const transactionCount = await this.reservationRepo.countCompletedByCavanId(cavan.id);
+        
+        return {
+          ...cavan,
+          distance,
+          transactionCount,
+        };
+      })
+    );
+    
+    // Now, sort the enriched cavan objects based on sortBy
     switch (sortBy) {
       case 'price':
-        return cavansWithDistance.sort((a, b) => a.dailyRate - b.dailyRate);
+        return enrichedCavans.sort((a, b) => a.dailyRate - b.dailyRate);
       
       case 'likes':
-        return cavansWithDistance.sort((a, b) => b.likedBy.length - a.likedBy.length);
+        return enrichedCavans.sort((a, b) => b.likedBy.length - a.likedBy.length);
 
       case 'distance':
         if (!origin) {
-          return cavans; // Return original cavans if no origin for distance sort
+          return enrichedCavans; // Return unsorted if no origin for distance sort
         }
-        return cavansWithDistance.sort((a, b) => {
+        return enrichedCavans.sort((a, b) => {
           if (a.distance === null) return 1;
           if (b.distance === null) return -1;
           return a.distance - b.distance;
         });
 
       default:
-        return cavansWithDistance;
+        return enrichedCavans; // Default to returning enrichedCavans (e.g., if sortBy is undefined or distance without origin)
     }
   }
 

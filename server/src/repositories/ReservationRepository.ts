@@ -46,4 +46,17 @@ export class ReservationRepository extends InMemoryRepository<Reservation> {
     }
     return count;
   }
+
+  async countCompletedByCavanId(cavanId: string): Promise<number> {
+    let count = 0;
+    for (const reservation of this.entities.values()) {
+      if (
+        reservation.cavanId === cavanId &&
+        reservation.status === 'completed'
+      ) {
+        count++;
+      }
+    }
+    return count;
+  }
 }

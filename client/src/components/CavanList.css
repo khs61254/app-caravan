@@ -22,3 +22,38 @@
   color: #7f8c8d;
   font-size: 1.2rem;
 }
+
+.sort-options {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+
+.sort-options span {
+  font-weight: 500;
+  color: #34495e;
+}
+
+.sort-options button {
+  background-color: #ecf0f1;
+  border: 1px solid #bdc3c7;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #7f8c8d;
+  transition: all 0.2s ease-in-out;
+}
+
+.sort-options button:hover {
+  background-color: #e0e6e8;
+  color: #34495e;
+}
+
+.sort-options button.active {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+}

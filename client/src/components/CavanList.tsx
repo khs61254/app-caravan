@@ -33,8 +33,7 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
   const [cavans, setCavans] = useState<Cavan[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState<number>(0); // For pagination if implemented
-  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [sortBy, setSortBy] = useState<'distance' | 'likes'>('distance');
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [selectedCavanId, setSelectedCavanId] = useState<string | null>(null);
   const { user, token } = useAuth();
@@ -54,17 +53,13 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
     }
 
     try {
-      // Optimistically update the UI
       setCavans(prevCavans =>
         prevCavans.map(cavan => {
           if (cavan.id === cavanId) {
-            const likedBy = cavan.likedBy || []; // Defensive guard
+            const likedBy = cavan.likedBy || [];
             const isLiked = likedBy.includes(user.id);
             if (isLiked) {
-              return {
-                ...cavan,
-                likedBy: likedBy.filter(id => id !== user.id),
-              };
+              return { ...cavan, likedBy: likedBy.filter(id => id !== user.id) };
             } else {
               return { ...cavan, likedBy: [...likedBy, user.id] };
             }
@@ -75,31 +70,17 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
 
       await fetch(`/api/cavans/${cavanId}/like`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
         },
+        body: JSON.stringify({ userId: user.id }),
       });
     } catch (err) {
-      // Revert the optimistic update on error if needed
       console.error('Failed to update like status', err);
+      // Optionally revert state on error
     }
   };
-
-
-  const observer = useRef<IntersectionObserver>();
-  const lastCavanElementRef = useCallback(
-    (node: HTMLDivElement) => {
-      if (loading) return;
-      if (observer.current) observer.current.disconnect();
-      observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          setPage((prevPage) => prevPage + 1);
-        }
-      });
-      if (node) observer.current.observe(node);
-    },
-    [loading, hasMore],
-  );
 
   useEffect(() => {
     // Get user's current location for distance sorting
@@ -113,7 +94,6 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
         },
         (err) => {
           console.error('Error getting user location:', err);
-          // Proceed without location if access denied
           setUserLocation({ lat: 34.0522, lng: -118.2437 }); // Default to LA
         },
       );
@@ -124,34 +104,22 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
   }, []);
 
   useEffect(() => {
-    if (!userLocation) return; // Wait until location is determined
+    if (!userLocation) return;
 
     const fetchCavans = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Construct API URL with sorting and pagination parameters
         const lat = userLocation?.lat;
         const lng = userLocation?.lng;
-        // For simplicity, let's assume one page loads all for now, or implement actual pagination in backend
-        const apiUrl = `/api/cavans?sortBy=distance&lat=${lat}&lng=${lng}`; // Sort by distance from user location
+        const apiUrl = `/api/cavans?sortBy=${sortBy}&lat=${lat}&lng=${lng}`;
 
         const response = await fetch(apiUrl);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-
-        const text = await response.text();
-        try {
-          const data: Cavan[] = JSON.parse(text);
-          setCavans(data);
-        } catch (e) {
-          throw new Error(`Failed to parse JSON: ${text}`);
-        }
-
-        // For infinite scroll, append new data
-        // For now, let's just set the initial data
-        setHasMore(false); // Assuming all data is fetched in one go for now
+        const data: Cavan[] = await response.json();
+        setCavans(data);
       } catch (e: any) {
         setError('Failed to fetch cavans: ' + e.message);
         console.error('Fetch error:', e);
@@ -161,7 +129,7 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
     };
 
     fetchCavans();
-  }, [userLocation, page, refreshKey]); // Re-fetch when userLocation, page or refreshKey changes
+  }, [userLocation, sortBy, refreshKey]);
 
   if (error) {
     return <div className="error-message">{error}</div>;
@@ -169,16 +137,18 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
   
   return (
     <div className="cavan-list-container">
+      <div className="sort-options">
+        <span>Sort by:</span>
+        <button onClick={() => setSortBy('distance')} className={sortBy === 'distance' ? 'active' : ''}>Distance</button>
+        <button onClick={() => setSortBy('likes')} className={sortBy === 'likes' ? 'active' : ''}>Likes</button>
+      </div>
       {cavans.length === 0 && !loading && !error && (
         <p className="info-message">No cavans available.</p>
       )}
       <div className="cavan-grid">
-        {cavans.map((cavan, index) => {
-          if (!cavan.likedBy) {
-            console.error('Cavan object is missing likedBy property:', cavan);
-          }
-          const card = (
+        {cavans.map((cavan) => (
             <CavanCard
+              key={cavan.id}
               id={cavan.id}
               name={cavan.name}
               photo={cavan.photos[0] || 'https://via.placeholder.com/300x180?text=No+Image'}
@@ -189,22 +159,7 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
               onClick={() => handleCardClick(cavan.id)}
               onLike={handleLike}
             />
-          );
-
-          if (cavans.length === index + 1) {
-            return (
-              <div ref={lastCavanElementRef} key={cavan.id}>
-                {card}
-              </div>
-            );
-          } else {
-            return (
-              <div key={cavan.id}>
-                {card}
-              </div>
-            );
-          }
-        })}
+        ))}
       </div>
       {loading && <p className="loading-message">Loading more cavans...</p>}
       {selectedCavanId && (
@@ -213,4 +168,5 @@ const CavanList: React.FC<CavanListProps> = ({ isGoogleMapsLoaded, refreshKey })
     </div>
   );
 };
+
 export default CavanList;
